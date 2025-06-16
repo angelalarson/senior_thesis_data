@@ -1,0 +1,409 @@
+---
+title: "carb_chem"
+format: html
+---
+
+```{r load packages}
+#| message: false
+library (tidyverse)
+library (janitor)
+library (cowplot)
+library(ggh4x)
+library(ggpubr)
+library(here)
+
+carb_chem <- read_csv(here("data", "carb_chem_data.csv")) %>% 
+  clean_names()
+```
+
+I recommend running each line of code individually and checking the edited data file/object each time so you understand how each command works. 
+
+```{r TA}
+#| message: false
+TA_summ <- carb_chem %>% # creating new object 
+  select(day, condition, treatment, ta_in_mmol_kg_sw) %>% # specifically selecting these columns for the graph
+  group_by(day, condition, treatment) %>% # group/order them by these parameters
+ summarise(
+    TA_mean = round(mean(ta_in_mmol_kg_sw), 2), # average the TA and round to two decimals
+    TA_sd = round(sd(ta_in_mmol_kg_sw), 2), # find the SD of TA and round to two decimals
+    n = n() # gonna be so fr, i dont know what this does
+  )
+  
+TA_g <- ggplot(data = TA_summ, # i created a new object of this graph called TA_g for when I group all the graphs together at the bottom. if you just want to export a single graph, this is not needed
+       aes(x = factor(day), # x axis must be turned into a factor (data type) and i want it to be day
+           y = TA_mean, # y is mean TA
+           color = interaction(treatment, condition), # color dependent on treatment and condition; interaction fxn allows them to group color by multiple things rather than just one
+           linetype = condition, # line type (solid, dotted, etc) by condition
+           group = interaction(treatment, condition))) + # again, group by treatment and condition
+ scale_color_manual( # chanigng the colors 
+     values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c( # changing the labels
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual( # changing line type
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) + # add points for each piece of data, and change size of each point
+  geom_line(size = 1) + # add lines to connect points, and change size of each point
+  geom_errorbar(aes(ymin = TA_mean - TA_sd,
+                    ymax = TA_mean + TA_sd), # add error bars
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)", # labs changes the look specifics of the graph
+       y = expression(paste("Total Alkalinity (", mu, "mol kg"^{-1}, ")")),
+       color = "Color",
+       linetype = "Line Type") +
+  theme_cowplot() + # i like cowplot bc its very plain with nothing on it
+  theme(legend.title = element_blank()) # i got rid of the legend ONLY because I was gonna give them a common legend for all of them grouped together. get rid of this if youre wanting to look at one graph
+
+# ggsave("TA_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+just delete the "#" and change path to your folder of choice to save
+
+i didn't edit each individual code section since they are all pretty similar
+
+```{r}
+#| message: false
+hco3_summ <- carb_chem %>% 
+  select(day, condition, treatment, hco3_out_mmol_kg_sw) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    hco3_mean = round(mean(hco3_out_mmol_kg_sw), 2),
+    hco3_sd = round(sd(hco3_out_mmol_kg_sw), 2),
+    n = n()
+  )
+
+hco3_g <- ggplot(data = hco3_summ,
+       aes(x = factor(day),
+           y = hco3_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = hco3_mean - hco3_sd,
+                    ymax = hco3_mean + hco3_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = expression(HCO[3]^"-" * " (" * mu * "mol kg"^{-1} * ")"),
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+# ggsave("hco3_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+
+values = c( "bru.abio" = "violet", "bru.bio" = "violetred", "ctrl.abio" = "dodgerblue", "ctrl.bio" = "mediumblue" ),
+
+```{r}
+#| message: false
+co3_summ <- carb_chem %>% 
+  select(day, condition, treatment, co3_out_mmol_kg_sw) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    co3_mean = round(mean(co3_out_mmol_kg_sw), 2),
+    co3_sd = round(sd(co3_out_mmol_kg_sw), 2),
+    n = n()
+  )
+  
+co3_g <- ggplot(data = co3_summ,
+       aes(x = factor(day),
+           y = co3_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = co3_mean - co3_sd,
+                    ymax = co3_mean + co3_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = expression(CO[3]^"2-" * " (" * mu * "mol kg"^{-1} * ")"),
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+# ggsave("co3_FINAL.pdf", path = "visualized_data", dpi = 300)
+```
+
+
+```{r}
+#| message: false
+tco2_summ <- carb_chem %>% 
+  select(day, condition, treatment, tco2_in_mmol_kg_sw) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    tco2_mean = round(mean(tco2_in_mmol_kg_sw), 2),
+    tco2_sd = round(sd(tco2_in_mmol_kg_sw), 2),
+    n = n()
+  )
+  
+tco2 <- ggplot(data = tco2_summ, 
+       aes(x = factor(day),
+           y = tco2_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = tco2_mean - tco2_sd,
+                    ymax = tco2_mean + tco2_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = expression(TCO[2] * " (" * mu * "mol kg"^{-1} * ")"),
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+# ggsave("tco2_FINAL.pdf", path = "visualized_data", dpi = 300)
+```
+
+```{r}
+#| message: false
+pco2_summ <- carb_chem %>% 
+  select(day, condition, treatment, p_co2_out_uatm) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    pco2_mean = round(mean(p_co2_out_uatm), 2),
+    pco2_sd = round(sd(p_co2_out_uatm), 2),
+    n = n()
+  )
+
+pco2 <- ggplot(data = pco2_summ,
+       aes(x = factor(day),
+           y = pco2_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = pco2_mean - pco2_sd,
+                    ymax = pco2_mean + pco2_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = expression(pCO[2] * " (" * mu * "mol kg"^{-1} * ")"),
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+# ggsave("pco2_FINAL.pdf", path = "visualized_data", dpi = 300)
+```
+
+```{r}
+#| message: false
+ph_summ <- carb_chem %>% 
+  select(day, condition, treatment, p_h) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    ph_mean = round(mean(p_h), 2),
+    ph_sd = round(sd(p_h), 2),
+    n = n()
+  )
+
+ph_g <- ggplot(data = ph_summ,
+       aes(x = factor(day),
+           y = ph_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = ph_mean - ph_sd,
+                    ymax = ph_mean + ph_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = "pH",
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+ # ggsave("ph_FINAL.pdf", path = "visualized_data", dpi = 300)
+```
+
+```{r}
+#| message: false
+w_ca_summ <- carb_chem %>% 
+  select(day, condition, treatment, w_ca_out) %>% 
+  group_by(day, condition, treatment) %>% 
+ summarise(
+    w_ca_mean = round(mean(w_ca_out), 2),
+    w_ca_sd = round(sd(w_ca_out), 2),
+    n = n()
+  )
+
+ggplot(data = w_ca_summ,
+       aes(x = factor(day),
+           y = w_ca_mean,
+           color = interaction(treatment, condition),
+           linetype = condition,
+           group = interaction(treatment, condition))) +
+  scale_color_manual(
+    values = c(
+      "bru.abio" = "violet",
+      "bru.bio"  = "violetred",
+      "ctrl.abio" = "cornflowerblue",
+      "ctrl.bio"  = "mediumblue"
+    ),
+    labels = c(
+      "bru.abio" = "Brucite (Abiotic)",
+      "bru.bio"  = "Brucite (Biotic)",
+      "ctrl.abio" = "Control (Abiotic)",
+      "ctrl.bio"  = "Control (Biotic)"
+    )
+  ) +
+  scale_linetype_manual(
+    values = c("abio" = "dotted", "bio" = "solid"),
+    labels = c("abio" = "Abiotic", "bio" = "Biotic")
+  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = w_ca_mean - w_ca_sd,
+                    ymax = w_ca_mean + w_ca_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+      y = expression(Omega[Ca]),
+       color = "Group",
+       linetype = "Line Type") +
+  theme_cowplot() +
+  theme(legend.title = element_blank())
+
+# ggsave("Wca_FINAL.pdf", path = "visualized_data", dpi = 300)
+```
+
+```{r}
+#| message: false
+# ggarrange(
+#  TA_g, ph_g, pco2, # order of plots
+#  tco2, hco3_g, co3_g,
+ # ncol = 3, nrow = 2, # number of rows and columns
+#  labels = c("A", "B", "C", "D", "E", "F"), # optional labels
+#  common.legend = TRUE,  # for plots to share a common legend
+#  legend = "bottom"
+# )
+
+# ggexport(
+#  filename = "visualized_data/CC_FINAL.pdf",
+#  plot = last_plot(),  # or replace with your arranged plot object
+#  width = 10,          # adjust as needed
+ # height = 8,          # adjust as needed
+#  res = 300            # dpi
+# )
+```
+ ^^^ if you choose to arrange them all like i did for my thesis document, you can use ggarrange to do it for you. change the dimensions and whatever else you may like
+
+also i couldnt commit it to git without "#" any export method, so just undo it
+
+
+
+
