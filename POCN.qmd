@@ -1,0 +1,155 @@
+---
+title: "POCN"
+author: "Angela Grace Larson"
+format: html
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library (tidyverse)
+library (janitor)
+library (cowplot)
+library(ggh4x)
+library(FSA)
+
+
+POC_N <- read_csv("poc_n.csv") %>% 
+ clean_names()
+```
+
+```{r}
+POCN_summ <- POC_N %>% 
+  filter (condition == "biotic") %>% 
+  select(day, condition, treatment, pon_pmol_cell, poc_pmol_cell, ratio_pmol_ml) %>% 
+  group_by(day, condition, treatment)
+
+```
+
+```{r}
+pon_g <- ggplot (data = POCN_summ,
+        aes (x = factor(day),
+             y = pon_pmol_cell,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "BIAA", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_boxplot() +
+labs(
+    x = "Time (d)",
+  y = expression(PON ~ (pmol ~ cell^{-1})),
+    color = "Treatment"
+  ) +
+    theme_cowplot()
+
+ ggsave("PON_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+
+```{r}
+poc_g <- ggplot (data = POCN_summ,
+        aes (x = factor(day),
+             y = poc_pmol_cell,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "BIAA", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_boxplot() +
+labs(
+    x = "Time (d)",
+    y = expression(POC ~ (pmol ~ cell^{-1})),
+    color = "Treatment"
+  ) +
+    theme_cowplot()
+
+ ggsave("POC_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+
+```{r}
+pocpon_g <- ggplot (data = POCN_summ,
+        aes (x = factor(day),
+             y = ratio_pmol_ml,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "BIAA", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_boxplot() +
+labs(
+    x = "Time (d)",
+    y = "POC : PON",
+    color = "Treatment"
+  ) +
+    theme_cowplot()
+
+ ggsave("POC_N.pdf", path = "visualized_data", dpi = 300) 
+```
+
+You can add options to executable code like this
+
+```{r}
+POCN.sub <- POCN_summ %>% 
+  filter(day != "0")
+
+ggplot(data = POCN.sub,
+       aes(sample = poc_pmol_cell)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+
+wilcox.test(poc_pmol_cell ~ treatment,
+            data = POCN.sub)
+
+```
+
+```{r}
+ggplot(data = POCN.sub,
+       aes(sample = pon_pmol_cell)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+
+wilcox.test(pon_pmol_cell ~ treatment,
+            data = POCN.sub)
+```
+
+```{r}
+ggplot(data = POCN.sub,
+       aes(sample = ratio_pmol_ml)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+
+wilcox.test(ratio_pmol_ml ~ treatment,
+            data = POCN.sub)
+```
+
+```{r}
+combined_plot <- ggarrange(
+  pic_g, poc_g, pon_g, picpoc_g, pocpon_g,
+  ncol = 2, nrow = 3,
+  labels = c("A", "B","C", "D", "E"), # optional labels
+  common.legend = TRUE,  # if plots share a common legend
+  legend = "bottom"
+)
+
+combined_plot <- combined_plot + 
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+ggexport(
+  filename = "visualized_data/BIO_FINAL.pdf",
+  plot = last_plot(),  # or replace with your arranged plot object
+  width = 11,          # adjust as needed
+  height = 9,          # adjust as needed
+  res = 300            # dpi
+)
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
