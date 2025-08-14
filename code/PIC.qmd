@@ -1,0 +1,377 @@
+---
+title: "PIC"
+author: "Angela Grace Larson"
+format: html
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+# install.packages("ggh4x")
+library (tidyverse)
+library (janitor)
+library (cowplot)
+library(ggh4x)
+library(FSA)
+library(ggpubr)
+
+PIC <- read_csv("PIC_data1.csv") %>% 
+ clean_names()
+
+```
+
+```{r}
+PIC.sub <- PIC %>% 
+  select(sample_name, day, ca_corr_p_m, ca_pmol_cell_v, ca_corr_u_m, condition, treatment) %>% 
+  mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit()
+
+PIC_summ <- PIC.sub %>% 
+  filter (condition == "bio") %>% 
+  select(day, condition, treatment, ca_pmol_cell_v) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(PIC_mean = round(mean(ca_pmol_cell_v), 8), PIC_sd = round(sd(ca_pmol_cell_v), 8), n = n())
+```
+
+```{r}
+PIC_jitter1 <- PIC.sub %>% 
+  filter (condition == "bio" ) %>% 
+  select(day, condition, treatment, ca_pmol_cell_v) %>% 
+  group_by(day, condition, treatment)
+
+ggplot (data = PIC_jitter1,
+        aes (x = factor(day),
+             y = ca_pmol_cell_v,
+            color = factor(day))) +
+scale_color_manual(values = c("0" = "#E69F00",
+                                "3" = "#56B4E9",
+                                "6" = "#009E73",
+                               "8" = "#CC79A7")) +
+  geom_boxplot() +
+  labs(x = "Time (d)",
+    y = expression("PIC (pmol per cell)"),
+    color = "Day") +
+  facet_wrap2(~ treatment,
+              labeller = labeller(treatment = c("bru" = "Brucite", "ctrl" = "Control")),
+              strip = strip_themed(
+                background_x = list(
+                  "Control" = element_rect(fill = "violetred", color = "black", size = 1),
+                  "Brucite"  = element_rect(fill = "mediumblue", color = "black", size = 1)
+                ),
+                text_x = list(
+                  "Control" = element_text(color = "white"),
+                  "Brucite"  = element_text(color = "white")
+                )
+              )) +
+theme_cowplot()
+
+ ggsave("PIC_pmol_cell_box_bio.pdf", path = "visualized_data", dpi = 300) 
+
+```
+
+```{r}
+pic_g <- ggplot (data = PIC_jitter1,
+        aes (x = factor(day),
+             y = ca_pmol_cell_v,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "BIAA", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_boxplot() +
+labs(
+    x = "Time (d)",
+    y = expression(PIC ~ (pmol ~ cell^{-1})),
+    color = "Treatment"
+  ) +
+    theme_cowplot()
+
+ ggsave("PIC_FINAL.pdf", path = "visualized_data", dpi = 300) 
+
+```
+
+"Figure 1. Individual boxplots represent observations on calcium carbonate production (pmol/cell) for control (n = 12) and BIAA (n = 12) treatments on predetermined sampling time points (Days 0, 3, 6, 8). Colors represent treatment. A Wilcoxon rank-sum test showed no statistically significant difference in calcium carbonate production between treatment groups (W = 59, p = 0.1135). Day 0 values were excluded due to use of technical replicates."
+
+```{r biotic data}
+
+# PIC_summ1 <- PIC.sub %>% 
+ # filter (condition == "bio") %>% 
+ # select(day, condition, treatment, ca_umol) %>% 
+ # group_by(day, condition, treatment) %>% 
+ # summarise(PIC_mean = round(mean(ca_umol), 8), PIC_sd = round(sd(ca_umol), 8), n = n())
+
+pic_gg <- ggplot(data = PIC_summ,
+       aes(x = day,
+           y = PIC_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("BIAA", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Time (d)",
+    y = expression(CaCO[3]~"(pmol per cell)"),
+    color = "Treatment"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(hjust = 0)  # left-align the caption
+  ) +
+ # facet_wrap(~ treatment) +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = PIC_mean - PIC_sd, 
+                    ymax = PIC_mean + PIC_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("PIC_pmol_cell_line_bio.pdf", path = "visualized_data", dpi = 300) 
+
+
+```
+
+```{r bio_umol}
+PIC_summ2 <- PIC.sub %>% 
+  filter (condition == "bio") %>% 
+  select(day, condition, treatment, ca_corr_u_m) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(PIC_mean = round(mean(ca_corr_u_m), 8), PIC_sd = round(sd(ca_corr_u_m), 8), n = n())
+
+pic_poc_gg <- ggplot(data = PIC_summ1,
+       aes(x = day,
+           y = PIC_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = expression("PIC ("*mu*"mol)"),
+    color = "Treatment") +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = PIC_mean - PIC_sd, 
+                    ymax = PIC_mean + PIC_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("PIC_umol_line_bio.pdf", path = "visualized_data", dpi = 300) 
+```
+
+```{r abio_umol}
+PIC_summ2 <- PIC.sub %>% 
+  filter (condition == "abio") %>% 
+  select(day, condition, treatment, ca_corr_u_m) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(PIC_mean = round(mean(ca_corr_u_m), 8), PIC_sd = round(sd(ca_corr_u_m, 8), n = n())
+
+pic_poc_gg <- ggplot(data = PIC_summ2,
+       aes(x = day,
+           y = PIC_mean,
+           group = treatment,
+           color = treatment) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = expression("PIC ("*mu*"mol)"),
+    color = "Treatment") +
+  theme_cowplot()
+```
+
+```{r}
+PIC.sub1 <- PIC %>% 
+  select(sample_name, day, pic_poc_22, condition, treatment) %>% 
+  mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit()
+
+PIC_jitter2 <- PIC.sub1 %>% 
+  filter (condition == "bio") %>% 
+  select(day, condition, treatment, pic_poc_22) %>% 
+  group_by(day, condition, treatment)
+
+ggplot (data = PIC_jitter2,
+        aes (x = factor(day),
+             y = pic_poc_22,
+            color = factor(day))) +
+scale_color_manual(values = c("0" = "#E69F00",
+                                "3" = "#56B4E9",
+                                "6" = "#009E73",
+                               "8" = "#CC79A7")) +
+  geom_boxplot() +
+  labs(
+  x = "Time (d)",
+  y = expression(CaCO[3] * " : POC"),
+  color = "Day"
+) +
+  facet_wrap2(~ treatment,
+              labeller = labeller(treatment = c("bru" = "Brucite", "ctrl" = "Control")),
+              strip = strip_themed(
+                background_x = list(
+                  "Control" = element_rect(fill = "violetred", color = "black", size = 1),
+                  "Brucite"  = element_rect(fill = "mediumblue", color = "black", size = 1)
+                ),
+                text_x = list(
+                  "Control" = element_text(color = "white"),
+                  "Brucite"  = element_text(color = "white")
+                )
+              )) +
+theme_cowplot()
+
+ggsave("PIC_POC_box1.pdf", path = "visualized_data", dpi = 300)
+
+```
+
+```{r}
+picpoc_g <- ggplot (data = PIC_jitter2,
+        aes (x = factor(day),
+             y = pic_poc_22,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "BIAA", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_boxplot() +
+  labs(x = "Time (d)",
+    y = "PIC : POC",
+    color = "Treatment") +
+    theme_cowplot()
+
+ggsave("PIC_POC_FINAL.pdf", path = "visualized_data", dpi = 300)
+
+```
+
+```{r}
+PIC_POC_summ <- PIC %>% 
+  filter (condition == "bio") %>% 
+  select(day, condition, treatment, pic_poc_22) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(PIC_POC_mean = round(mean(pic_poc_22), 8), PIC_POC_sd = round(sd(pic_poc_22), 8), n = n())
+
+ggplot(data = PIC_POC_summ,
+       aes(x = day,
+           y = PIC_POC_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = expression(CaCO[3] * " : POC"),
+    color = "Treatment") +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = PIC_POC_mean - PIC_POC_sd, 
+                    ymax = PIC_POC_mean + PIC_POC_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("PIC_POC_line1.pdf", path = "visualized_data", dpi = 300)
+
+```
+
+```{r stats}
+
+ggplot(data = PIC.sub.bio,
+       aes(x = ca_pmol_cell_v,
+           fill = treatment)) + # fill columns by production type
+  geom_histogram(bins = 6, # use rice rule to determine number of bins, stating number of bins i want
+                 color = "black") +
+  facet_wrap(~ treatment)
+
+```
+
+```{r}
+PIC.sub.bio <- PIC.sub %>% 
+  filter(condition == "bio") %>% 
+  filter(day != "0")
+
+ggplot(data = PIC.sub.bio,
+       aes(sample = ca_pmol_cell_v)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+
+wilcox.test(ca_pmol_cell_v ~ treatment,
+            data = PIC.sub.bio)
+```
+
+```{r}
+PIC.sub.abio <- PIC.sub %>% 
+  filter(condition == "abio")
+
+ggplot(data = PIC.sub.abio,
+       aes(sample = ca_corr_u_m)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+```
+
+```{r}
+pic.poc.stat <- PIC %>% 
+  filter(condition == "bio") %>% 
+  filter(!day %in% "0") %>% 
+  select(day, condition, treatment, pic_poc_22) %>% 
+  group_by(day, condition, treatment)
+
+ggplot(data = pic.poc.stat,
+       aes(sample = pic_poc_22)) + # y axis of the QQ plot, reference line 1:1 btwn sample and theoretical 
+  geom_qq_line(color = "blue") + # plotting the QQ points
+  geom_qq() + #creating two panels
+  facet_wrap(~ treatment)
+
+wilcox.test(pic_poc_22 ~ treatment,
+            data = pic.poc.stat) 
+```
+
+```{r}
+combined_plot <- ggarrange(
+  pic_g, picpoc_g, 
+  ncol = 2, nrow = 1,
+  labels = c("A", "B"),
+  common.legend = TRUE,
+  legend = "bottom"
+)
+
+# Export
+ggexport(
+  filename = "visualized_data/PIC_POSTER.pdf",
+  plot = combined_plot,
+  width = 10,
+  height = 5,
+  res = 300
+)
+```
+
+```{r}
+combined_plot <- ggarrange(
+  pic_gg, 
+  ncol = 2, nrow = 1,
+  labels = c("A"),
+  common.legend = TRUE,
+  legend = "bottom"
+)
+
+combined_plot <- combined_plot + 
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+# Export
+ggexport(
+  filename = "visualized_data/PIC_POSTER_TEST.pdf",
+  plot = combined_plot,
+  width = 10,
+  height = 5,
+  res = 300
+)
+```
