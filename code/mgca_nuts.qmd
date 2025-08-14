@@ -1,0 +1,485 @@
+---
+title: "mgca_nuts"
+author: "Angela Larson"
+format: html
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+lapply(c("tidyverse",
+         "here",
+         "janitor",
+         "cowplot",
+         "broom",
+         "ggpubr",
+         "ggh4x"),
+       require, character.only = TRUE)
+
+```
+
+
+
+
+## R Markdown
+
+mgca nutrient experiment results
+
+
+```{r}
+#load data
+mgca_nuts <- read.csv(here("data", "mgca_nuts.csv")) %>% 
+  clean_names() #makes data names uniform
+#file.exists('/Users/angelalarson/Downloads/coding/R/mgca_data/mgca_nuts.csv')
+
+
+#subset
+mgca_po4.sub <- mgca_nuts %>% 
+  select(sample_name, day, condition, po4_u_m) %>% 
+  mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit() %>% 
+  separate(col = sample_name,
+           into = c("treatment", "type"),
+           sep = "-",
+           remove = FALSE)
+  #mutate(sample_name_new = str_sub(sample_name_new, end = -6))
+  
+mgca_po4_group <- mgca_po4.sub %>% 
+  select(day, condition, treatment, po4_u_m) %>% 
+  group_by(day, condition, treatment)
+
+mgca_po4_summ <- mgca_po4.sub %>% 
+  select(day, condition, treatment, po4_u_m) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(po4_mean = round(mean(po4_u_m), 2), po4_sd = round(sd(po4_u_m), 2), n = n())
+
+
+
+if (!dir.exists("visualized_data")) 
+    dir.create("visualized_data")
+  
+# ggsave("PO4_bio_ND.pdf", path = "visualized_data", dpi = 300)
+
+#now gonna do this for abiotic data
+po4_summ_abio <- mgca_po4_summ %>% 
+  filter(condition == "abiotic")
+
+  ggplot(data = po4_summ_abio, aes(x = day, y = po4_mean, group = treatment, color = treatment)) +
+  geom_line() +
+  geom_point() +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = po4_mean - po4_sd, ymax = po4_mean + po4_sd, color = treatment), width = .05) +
+  labs(x = "Time (d)", y = expression(paste("PO4", " (", mu, "M", ")")))
+  #literally why does this look so weird
+  
+  ggsave("PO4_abio_ND.pdf", path = "visualized_data", dpi = 300)
+
+  
+
+  #now for NO3+NO2
+  mgca_no3_no2.summ <- mgca_nuts %>% 
+  select(sample_name, day, condition, no3_no2_u_m) %>% 
+  mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit() %>% 
+  separate(col = sample_name,
+           into = c("treatment", "type"),
+           sep = "-",
+           remove = FALSE)
+
+mgca_no32_summ <- mgca_no3_no2.sub %>% 
+  select(day, condition, treatment, no3_no2_u_m) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(no3_no2_mean = round(mean(no3_no2_u_m), 2), no3_no2_sd = round(sd(no3_no2_u_m, 2), n = n())
+            
+```
+
+
+
+```{r biotic data}
+#first for biotic data
+po4_summ_bio <- mgca_po4_summ %>% 
+  filter(condition == "biotic")
+
+
+ggplot(data = po4_summ_bio, 
+       aes(x = day, 
+           y = po4_mean, 
+           group = treatment, 
+           color = treatment)) +
+   scale_color_manual(
+        values = c("BRU" = "violetred", "CTRL" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  theme_cowplot() +
+  geom_errorbar(aes
+                (ymin = po4_mean - po4_sd, 
+                  ymax = po4_mean + po4_sd, 
+                  color = treatment), 
+                width = .05) +
+ labs(
+    x = "Time (d)",
+    y = expression(PO[4]*" ("*mu*"M)"),
+    color = "Treatment"
+ )
+
+ # ggsave("PO4_bio.pdf", path = "visualized_data", dpi = 300)
+  
+ggplot(data = po4_summ_bio, 
+       aes(x = day, 
+           y = po4_mean, 
+           group = treatment, 
+           color = treatment)) +
+   scale_color_manual(
+        values = c("BRU" = "violetred", "CTRL" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  theme_cowplot() +
+  geom_errorbar(aes
+                (ymin = po4_mean - po4_sd, 
+                  ymax = po4_mean + po4_sd, 
+                  color = treatment), 
+                width = .05) +
+ labs(
+    x = "Time (d)",
+    y = expression(PO[4]*" ("*mu*"M)"),
+    color = "Treatment",
+    title = "PO4 Biotic")
+  
+ ggsave("PO4_bio_TITLE.pdf", path = "visualized_data", dpi = 300) 
+
+```
+
+```{r PO4 abio}
+po4_summ_abio <- mgca_po4_summ %>% 
+  filter(condition == "abiotic")
+
+  ggplot(data = po4_summ_abio, 
+         aes(x = day, 
+             y = po4_mean, 
+             group = treatment, 
+             color = treatment)) +
+    scale_color_manual(
+        values = c("BRU" = "violetred", "CTRL" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = po4_mean - po4_sd, 
+                    ymax = po4_mean + po4_sd, 
+                    color = treatment), 
+                width = .05) +
+  labs(
+    x = "Time (d)",
+    y = expression(PO[4]*" ("*mu*"M)"),
+    color = "Treatment"
+ )
+
+# ggsave("PO4_abio.pdf", path = "visualized_data", dpi = 300)
+
+
+ggplot(data = po4_summ_abio, 
+         aes(x = day, 
+             y = po4_mean, 
+             group = treatment, 
+             color = treatment)) +
+    scale_color_manual(
+        values = c("BRU" = "violetred", "CTRL" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = po4_mean - po4_sd, 
+                    ymax = po4_mean + po4_sd, 
+                    color = treatment), 
+                width = .05) +
+  labs(
+    x = "Time (d)",
+    y = expression(PO[4]*" ("*mu*"M)"),
+    color = "Treatment",
+    title = "PO4 Abiotic"
+ )
+  
+#  ggsave("PO4_abio_TITLE.pdf", path = "visualized_data", dpi = 300) 
+  
+```
+```{r}
+po4_summ_T8 <- mgca_po4_summ %>% 
+  filter(day == "8")
+
+ggplot(data = po4_summ_T8,
+       aes(x = treatment,
+           y = po4_mean,
+           color = treatment)) + 
+ geom_histogram()
+
+
+
+```
+```{r FINAL PO4}
+# TA_summ <- carb_chem %>% 
+ # select(day, condition, treatment, ta_in_mmol_kg_sw) %>% 
+#  group_by(day, condition, treatment) %>% 
+# summarise(
+#    TA_mean = round(mean(ta_in_mmol_kg_sw), 2),
+  #  TA_sd = round(sd(ta_in_mmol_kg_sw), 2),
+#    n = n()
+#  )
+
+ mgca_po4_summ$group_id <- interaction(mgca_po4_summ$treatment, mgca_po4_summ$condition)
+
+ mgca_po4_summ$treatment <- as.character(mgca_po4_summ$treatment)
+ mgca_po4_summ$condition <- as.character(mgca_po4_summ$condition)
+  
+po4_g <- ggplot(data = mgca_po4_summ,
+       aes(x = factor(day),
+    y = po4_mean,
+    color = group_id,
+  #  linetype = condition,
+    group = group_id)) +
+ scale_color_manual(
+    values = c(
+      "BRU.abiotic" = "violet",
+      "BRU.biotic"  = "violetred",
+      "CTRL.abiotic" = "cornflowerblue",
+      "CTRL.biotic"  = "mediumblue"
+    ),
+    labels = c(
+      "BRU.abiotic" = "BIAA (Abiotic)",
+      "BRU.biotic"  = "BIAA (Biotic)",
+      "CTRL.abiotic" = "Control (Abiotic)",
+      "CTRL.biotic"  = "Control (Biotic)"
+    )
+  ) +
+#  scale_linetype_manual(
+#    values = c("abiotic" = "dotted", "biotic" = "solid"),
+ #   labels = c("abiotic" = "Abiotic", "biotic" = "Biotic")
+#  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = po4_mean - po4_sd,
+                    ymax = po4_mean + po4_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+       y = expression(paste("DIP (", mu, "mol kg"^{-1}, ")")),
+       color = "Color") +
+  theme_cowplot() +
+  theme(legend.title = element_blank()) +
+  facet_wrap2(
+  ~ condition,
+  labeller = labeller(condition = c("abiotic" = "Abiotic", "biotic" = "Biotic")),
+  strip = strip_themed(
+    background_x = list(
+      "Abiotic" = element_rect(fill = "firebrick", color = "black", size = 1),
+      "Biotic"  = element_rect(fill = "blue", color = "black", size = 1)
+    ),
+    text_x = list(
+      "Abiotic" = element_text(color = "white"),
+      "Biotic"  = element_text(color = "white")
+    )
+  )
+)
+
+# ggsave("PO4_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+
+```{r FINAL NO3+NO2}
+ no3_2_sub <- mgca_nuts %>% 
+ mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit() %>% 
+  separate(col = sample_name,
+           into = c("treatment", "type"),
+           sep = "-",
+           remove = FALSE)
+  
+  no3_2_summ <- no3_2_sub %>% 
+  select(day, condition, treatment, no3_no2_u_m) %>% 
+group_by(day, condition, treatment) %>% 
+ summarise(
+    no32_mean = round(mean(no3_no2_u_m), 2),
+   no32_sd = round(sd(no3_no2_u_m), 2),
+    n = n()
+  )
+
+no3_2_summ$group_id <- interaction(no3_2_summ$treatment, no3_2_summ$condition)
+
+  
+no32_g <- ggplot(data = no3_2_summ,
+       aes(x = factor(day),
+    y = no32_mean,
+    color = group_id,
+  #  linetype = condition,
+    group = group_id)) +
+ scale_color_manual(
+    values = c(
+      "BRU.abiotic" = "violet",
+      "BRU.biotic"  = "violetred",
+      "CTRL.abiotic" = "cornflowerblue",
+      "CTRL.biotic"  = "mediumblue"
+    ),
+    labels = c(
+      "BRU.abiotic" = "BIAA (Abiotic)",
+      "BRU.biotic"  = "BIAA (Biotic)",
+      "CTRL.abiotic" = "Control (Abiotic)",
+      "CTRL.biotic"  = "Control (Biotic)"
+    )
+  ) +
+#  scale_linetype_manual(
+#    values = c("abiotic" = "dotted", "biotic" = "solid"),
+ #   labels = c("abiotic" = "Abiotic", "biotic" = "Biotic")
+#  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = no32_mean - no32_sd,
+                    ymax = no32_mean + no32_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+       y = expression(paste("DIN (", mu, "mol kg"^{-1}, ")")),
+       color = "Color") +
+  theme_cowplot() +
+  theme(legend.title = element_blank()) +
+  facet_wrap2(
+  ~ condition,
+  labeller = labeller(condition = c("abiotic" = "Abiotic", "biotic" = "Biotic")),
+  strip = strip_themed(
+    background_x = list(
+      "Abiotic" = element_rect(fill = "firebrick", color = "black", size = 1),
+      "Biotic"  = element_rect(fill = "blue", color = "black", size = 1)
+    ),
+    text_x = list(
+      "Abiotic" = element_text(color = "white"),
+      "Biotic"  = element_text(color = "white")
+    )
+  )
+)
+
+# ggsave("NO3_2_FINAL.pdf", path = "visualized_data", dpi = 300) 
+
+```
+
+
+```{r}
+ si_sub <- mgca_nuts %>% 
+ mutate(sample_name = str_sub(sample_name, start = 4, end = -6)) %>% 
+  na.omit() %>% 
+  separate(col = sample_name,
+           into = c("treatment", "type"),
+           sep = "-",
+           remove = FALSE)
+  
+  si_summ <- si_sub %>% 
+    filter(si_u_m != "9.1") %>% 
+  select(day, condition, treatment, si_u_m) %>% 
+group_by(day, condition, treatment) %>% 
+ summarise(
+    si_mean = round(mean(si_u_m), 2),
+   si_sd = round(sd(si_u_m), 2),
+    n = n()
+  )
+
+si_summ$group_id <- interaction(si_summ$treatment, si_summ$condition)
+
+  
+si_g <- ggplot(data = si_summ,
+       aes(x = factor(day),
+    y = si_mean,
+    color = group_id,
+  #  linetype = condition,
+    group = group_id)) +
+ scale_color_manual(
+    values = c(
+      "BRU.abiotic" = "violet",
+      "BRU.biotic"  = "violetred",
+      "CTRL.abiotic" = "cornflowerblue",
+      "CTRL.biotic"  = "mediumblue"
+    ),
+    labels = c(
+      "BRU.abiotic" = "BIAA (Abiotic)",
+      "BRU.biotic"  = "BIAA (Biotic)",
+      "CTRL.abiotic" = "Control (Abiotic)",
+      "CTRL.biotic"  = "Control (Biotic)"
+    )
+  ) +
+#  scale_linetype_manual(
+#    values = c("abiotic" = "dotted", "biotic" = "solid"),
+ #   labels = c("abiotic" = "Abiotic", "biotic" = "Biotic")
+#  ) +
+  geom_point(size = 4) +
+  geom_line(size = 1) +
+  geom_errorbar(aes(ymin = si_mean - si_sd,
+                    ymax = si_mean + si_sd),
+                width = 0.05,
+                size = 1) +
+  labs(x = "Time (d)",
+       y = expression(paste(DSi, " (", mu, "mol kg"^{-1}, ")")),
+       color = "Color") +
+  theme_cowplot() +
+  theme(legend.title = element_blank()) +
+  facet_wrap2(
+  ~ condition,
+  labeller = labeller(condition = c("abiotic" = "Abiotic", "biotic" = "Biotic")),
+  strip = strip_themed(
+    background_x = list(
+      "Abiotic" = element_rect(fill = "firebrick", color = "black", size = 1),
+      "Biotic"  = element_rect(fill = "blue", color = "black", size = 1)
+    ),
+    text_x = list(
+      "Abiotic" = element_text(color = "white"),
+      "Biotic"  = element_text(color = "white")
+    )
+  )
+)
+
+# ggsave("Si_FINAL.pdf", path = "visualized_data", dpi = 300) 
+```
+
+
+```{r}
+combined_plot2 <- ggarrange(
+  po4_g, no32_g, si_g,
+  ncol = 3, nrow = 1,
+  labels = c("A", "B","C"), # optional labels
+  common.legend = TRUE,  # if plots share a common legend
+  legend = "bottom"
+)
+
+combined_plot2 <- combined_plot2 + 
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+#ggexport(
+#  filename = "visualized_data/NUTS_FINAL.pdf",
+ # plot = last_plot(),  # or replace with your arranged plot object
+#  width = 15,          # adjust as needed
+#  height = 5,          # adjust as needed
+#  res = 300            # dpi
+# )
+```
+
+```{r}
+ combined_plot2 <- ggarrange(
+  po4_g, no32_g,
+  ncol = 2, nrow = 1,
+  labels = c("A", "B"),
+  common.legend = TRUE,  # if plots share a common legend
+  legend = "bottom"
+)
+
+combined_plot2 <- combined_plot2 + 
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+
+# ggexport(
+ #  filename = "visualized_data/NUTS_FINAL.pdf",
+#  plot = last_plot(),  # or replace with your arranged plot object
+#  width = 9,          # adjust as needed
+#  height = 3,          # adjust as needed
+ # res = 300            # dpi
+#)
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -1,0 +1,164 @@
+---
+title: "pH"
+author: "Angela Grace Larson"
+format: html
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library (tidyverse)
+library (janitor)
+library (cowplot)
+
+pH <- read_csv("data", "pH_data.csv") %>% 
+  clean_names()
+
+```
+
+```{r}
+pH_jitter1 <- pH %>% 
+  filter (condition == "bio" ) %>% 
+  select(day, condition, treatment, p_h_out) %>% 
+  group_by(day, condition, treatment)
+
+ggplot (data = pH_jitter1,
+        aes (x = factor(day),
+             y = p_h_out,
+            color = factor(day))) +
+scale_color_manual(values = c("0" = "#E69F00",
+                                "3" = "#56B4E9",
+                                "6" = "#009E73",
+                               "8" = "#CC79A7")) +
+  geom_boxplot() +
+  labs(x = "Time (d)",
+    y = "pH",
+    color = "Day") +
+  facet_wrap2(~ treatment,
+              labeller = labeller(treatment = c("bru" = "Brucite", "ctrl" = "Control")),
+              strip = strip_themed(
+                background_x = list(
+                  "Control" = element_rect(fill = "violetred", color = "black", size = 1),
+                  "Brucite"  = element_rect(fill = "mediumblue", color = "black", size = 1)
+                ),
+                text_x = list(
+                  "Control" = element_text(color = "white"),
+                  "Brucite"  = element_text(color = "white")
+                )
+              )) +
+theme_cowplot()
+
+```
+
+```{r}
+ggplot (data = pH_jitter1,
+        aes (x = factor(day),
+             y = p_h_out,
+             color = treatment)) +
+  scale_color_manual(
+  values = c("bru" = "violetred", "ctrl" = "mediumblue"),
+  labels = c("bru" = "Brucite", "ctrl" = "Control")  # <-- rename legend items here
+) +
+  geom_jitter(height = 0, width = 0.05)+
+  labs(x = "Time (d)",
+    y = "pH",
+    color = "Treatment") +
+    theme_cowplot()
+
+
+```
+
+```{r}
+pH_summ <- pH.sub %>% 
+  filter (condition == "bio") %>% 
+  select(day, condition, treatment, p_h_out) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(pH_mean = round(mean(p_h_out), 2), pH_sd = round(sd(p_h_out), 2), n = n())
+
+ggplot(data = pH_summ,
+       aes(x = day,
+           y = pH_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = "pH",
+    color = "Treatment") +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = pH_mean - pH_sd, 
+                    ymax = pH_mean + pH_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("pH_bio_line.pdf", path = "visualized_data", dpi = 300) 
+
+```
+
+```{r}
+pH_summ1 <- pH.sub %>% 
+  filter (condition == "abio") %>% 
+  select(day, condition, treatment, p_h_out) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(pH_mean = round(mean(p_h_out), 2), pH_sd = round(sd(p_h_out), 2), n = n())
+
+ggplot(data = pH_summ1,
+       aes(x = day,
+           y = pH_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = "pH",
+    color = "Treatment") +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = pH_mean - pH_sd, 
+                    ymax = pH_mean + pH_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("pH_abio_line.pdf", path = "visualized_data", dpi = 300) 
+```
+
+```{r}
+pH_summ2 <- pH.sub %>% 
+  select(day, condition, treatment, p_h_out) %>% 
+  group_by(day, condition, treatment) %>% 
+  summarise(pH_mean = round(mean(p_h_out), 2), pH_sd = round(sd(p_h_out), 2), n = n())
+
+ggplot(data = pH_summ2,
+       aes(x = day,
+           y = pH_mean,
+           group = treatment,
+           color = treatment)) +
+scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control")) + 
+  geom_line() +
+  geom_point() +
+  labs(x = "Time (d)",
+    y = "pH",
+    color = "Treatment") +
+  theme_cowplot() +
+  geom_errorbar(aes(ymin = pH_mean - pH_sd, 
+                    ymax = pH_mean + pH_sd, 
+                    color = treatment), 
+                width = .05) 
+
+ggsave("pH_bio_line.pdf", path = "visualized_data", dpi = 300) 
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
