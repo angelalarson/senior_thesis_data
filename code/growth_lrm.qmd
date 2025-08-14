@@ -1,0 +1,157 @@
+---
+title: "growth_lrm"
+author: "James Gately (heavily edited by Angela Larson)"
+format: html
+---
+
+This code was originally written by James Gately to assist me in graphing in RStudio for the first time, and for the purpose of calculating growth rates and generation times. Majority of this was written by Gately, however it has since been edited and adapted to fit my needs. Whole code chunks exist as comments because of this, I didn't want to delete anything that was already written as I was figuring it out and could still be useful for anyone trying to look over my data. I am primarily uploading this for the use of one grad student, sorry for the messiness Maddie <3
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+lapply(c("tidyverse",
+         "here",
+         "janitor",
+         "kableExtra",
+         "cowplot",
+         "ggpubr",
+         "broom",
+         "lubridate",
+         "scales",
+         "rcompanion",
+         "FSA",
+         "flextable",
+         "magick",
+         "tsibble"),
+       require, character.only = TRUE)
+
+```
+
+
+```{r}
+#### ------ Read-in data ------ ####
+
+cell_growth <- read_csv(here("data", "cell_counts_MK.csv")) %>% 
+  # reads in CSV file; I'm using the "here" function to avoid typing out the whole directory, but to use it, you will need to have everything within an r project
+  clean_names() %>% # converts columns to lower-snake-case
+  mutate(sampling_date = mdy(sampling_date)) %>% # change sampling date to a mdy format using lubridate
+    mutate(date_label = case_when(sampling_date == "2024-12-05" ~ 0,
+                                sampling_date == "2024-12-08" ~ 3,
+                                sampling_date == "2024-12-11" ~ 6,
+                                sampling_date == "2024-12-13" ~ 8),
+         .after = sampling_date)  
+# creates a new column, date_label, which depends on the sampling date, and, when applicable, the label column.
+```
+
+
+Next, we will create a timeseries plot:
+
+```{r}
+## --- Plot Cell Density Data for OAE 6 --- ##
+
+# Cell counts graph
+#count_summ_plot <- cell_growth %>%
+ # select(sampling_date, label, date_label, count_cells_per_ml) %>% # selects the columns you'd like to use
+ # na.omit()   # omits any "NA" values
+#  group_by(sampling_date) %>% # grouped by noted column (used for summary calculations)
+#  summarise(cells_per_ml_mean = signif(mean(count_cells_per_ml),3), cells_per_ml_sd = signif(sd(count_cells_per_ml), 3)) # calculates mean and sd
+#the above was giving me an error regarding the select function, chatgpt gave me the below:
+
+count_summ_plot1 <- cell_growth %>% 
+  select(sampling_date, label, date_label, count_cells_per_ml) %>% 
+  mutate(label = str_sub(label, end = -6)) %>% 
+  na.omit() %>% 
+ separate(col = label,
+           into = c("label_new", "Treatment"),
+           sep = "_",
+           remove = FALSE)
+
+count_summ_plot2 <- count_summ_plot1 %>% 
+  select(sampling_date, date_label, label, Treatment, count_cells_per_ml) %>% 
+  group_by(date_label, label, Treatment) %>% 
+  summarise(count_mean = round(mean(count_cells_per_ml), 0), count_sd = round(sd(count_cells_per_ml), 0), n = n())
+
+#count_summ_plot <- cell_growth %>%
+#  dplyr::select(sampling_date, label, date_label, count_cells_per_ml) %>%
+ # na.omit() %>%
+ # group_by(date_label, label) %>%
+  #summarise(cells_per_ml_mean = signif(mean(count_cells_per_ml),3), 
+           # cells_per_ml_sd = signif(sd(count_cells_per_ml), 3))
+
+date_label_order <- unique(count_summ_plot2$date_label)
+
+## Create tsibble dataframe for time series
+
+cell_growth_ts <- count_summ_plot2 %>% 
+   dplyr::select(date_label, Treatment, count_sd, count_mean) %>% # selects the columns you'd like to use
+   na.omit()%>%    # omits any "NA" values
+  mutate(date_label = factor(date_label, levels = date_label_order))
+  
+   
+## Make plot for cell growth
+cell_count_p <- ggplot(data = cell_growth_ts, aes(x = date_label, y = count_mean, group = Treatment, color = Treatment)) +
+    geom_line() +
+    geom_point() +
+    theme_cowplot() +
+    geom_errorbar(aes(ymin = count_mean - count_sd, ymax = count_mean + count_sd), width = 0.02) +
+    labs(x = "Time (Days)", y = expression(paste("Cell Density", "(cells mL"^-{1}, ")"))) +
+     scale_color_manual(
+        values = c("bru" = "violetred", "ctrl" = "mediumblue"),  # Assign custom colors
+        labels = c("Brucite", "Control"))  # Rename legend items
+
+
+cell_count_p
+
+# Log version of previous graph
+cell_count_p_log <- cell_count_p +
+  scale_y_log10(breaks = 10^(3:6), labels = trans_format("log10", math_format(10^.x))) +  # log transforms your cell counts
+   labs(x = "Time (days)", y = expression(paste("Log Cell Density ", "(cells mL"^-{1}, ")")))+
+     annotate(geom="text", x = c(1.65, 1.65), y = c(2E5, 1.5E5), size = c(5, 5),
+           label=c(expression(paste(mu[CTRL], " = 0.76 \u00B1 0.15 d"^-1, " (95% CI)")),
+                   expression(paste(mu[BRU], " = 0.99 \u00B1 0.15 d"^-1, " (95% CI)")))) +
+  annotate(geom="text", x = c(1.2, 1.2), y = c(9E4, 7E4), size = c(5, 5),
+           label=c(expression(paste(t[CTRL], " = 0.91 \u00B1 0.08 d")),
+                   expression(paste(t[BRU], " = 0.7 \u00B1 0.2 d"))))
+cell_count_p_log
+
+
+```
+
+
+Finally, we will fit our data to a linear regression model:
+
+```{r}
+# Wrangle data
+cell_counts_lm <- count_summ_plot1 %>% 
+  select(sampling_date, Treatment, date_label, count_cells_per_ml) %>%
+  na.omit() %>% 
+  filter(!(date_label == 0))%>%  # Keep everything except mpg=21 or cyl=6
+  #mutate(log_cell_count_ml = round(log(count_cells_per_ml), 2)) # log transforms cell counts
+  mutate(log_cell_count_ml = log(count_cells_per_ml))
+
+
+
+# Run lm by grouping
+cell_counts_lm_summ1 <- cell_counts_lm %>% 
+  #mutate(type = "ctrl", .after = date_label) %>% 
+  select(date_label, Treatment, log_cell_count_ml) %>% # selects applicable columns
+  group_by(Treatment) %>% # groups rows by noted column
+  do(tidy(lm(log_cell_count_ml ~ date_label, data = .))) %>% # run linear regression model on dataframe  (cell counts as a function of sampling date)
+  select(Treatment, term, estimate, std.error) %>% # select columns
+  slice(2) %>% 
+  mutate(estimate_round = round(estimate, 2),
+         std.error_round = round(std.error, 2)) %>% 
+  #mutate(across(estimate:std.error, funs(round(., 2)))) %>% # rounds across noted columns to the 100th place
+  mutate(error_95 = 2*std.error_round,
+         sp_gr_final = paste(estimate_round, " ", "(", error_95 ,")", sep="")) %>% 
+  mutate(gen_time = round((log(2)/estimate), 2),
+         error_gen_time = signif((log(2)/(estimate)^2)*(error_95), 1),
+         gen_time_final = paste(gen_time, " ", "(", error_gen_time ,")", sep="")) %>% 
+  select(sp_gr_final, gen_time_final) %>% # selects columns for table
+  mutate(organism = "Emiliania huxleyi", .before = Treatment) # adds column with organism name
+
+#print(cell_count_p_log) +
+#ggplot2::annotate("Control: 0.5 ± 0.16", x = 3, y = 8, label = "Growth Rate", color = "darkred", size = 5)
+
+
+```
+
